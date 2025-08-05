@@ -11,16 +11,27 @@ for pokemon in "${pokemon_list[@]}"
 do
     echo "Fetching data for $pokemon..."
     
-    # Fetch from API
-    curl -s -f "https://pokeapi.co/api/v2/pokemon/$pokemon" -o "pokemon_data/${pokemon}.json"
-    
-    # Check if the request was successful
-    if [ $? -eq 0 ]; then
-        echo "Saved data to pokemon_data/${pokemon}.json ✅"
-    else
-        echo "Failed to fetch data for $pokemon ❌"
+    retries=0
+    success=0
+
+    while [ $retries -lt 3 ]; do
+        # Attempt to fetch from API
+        curl -s -f "https://pokeapi.co/api/v2/pokemon/$pokemon" -o "pokemon_data/${pokemon}.json"
+        
+        if [ $? -eq 0 ]; then
+            echo "Saved data to pokemon_data/${pokemon}.json ✅"
+            success=1
+            break
+        else
+            echo "Attempt $((retries+1)) failed for $pokemon ❌"
+            ((retries++))
+            sleep 1  # Small delay before retrying
+        fi
+    done
+
+    if [ $success -eq 0 ]; then
+        echo "Failed to fetch data for $pokemon after 3 attempts. Skipping... ❌"
     fi
 
-    # Wait 1 second to avoid rate limiting
-    sleep 1
+    sleep 1  # Wait to avoid rate limiting
 done
