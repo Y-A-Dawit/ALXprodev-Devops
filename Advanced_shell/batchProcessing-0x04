@@ -1,32 +1,38 @@
 #!/bin/bash
 
-# Create output directory
+# Create output directory if it doesn't exist
 mkdir -p pokemon_data
 
 # List of Pokémon
 pokemon_list=(bulbasaur ivysaur venusaur charmander charmeleon)
 
-# Start each fetch in the background, track PIDs
-declare -a pids
+# Function to fetch data for a single Pokémon
+fetch_pokemon_data() {
+    local pokemon=$1
+    echo "Fetching $pokemon..."
+    
+    curl -s -f "https://pokeapi.co/api/v2/pokemon/$pokemon" -o "pokemon_data/${pokemon}.json"
+    
+    if [ $? -eq 0 ]; then
+        echo "$pokemon fetched successfully ✅"
+    else
+        echo "Failed to fetch $pokemon ❌"
+    fi
+}
 
-for pokemon in "${pokemon_list[@]}"; do
-    (
-        # Simulate a slow fetch with sleep
-        sleep 5
-        curl -s "https://pokeapi.co/api/v2/pokemon/${pokemon}" -o "pokemon_data/${pokemon}.json"
-    ) &
-    pids+=($!)
+# Trap SIGINT and cleanup background jobs
+trap 'echo "Terminating background jobs..."; jobs -p | xargs kill; exit' SIGINT
+
+# Start background fetch jobs
+for pokemon in "${pokemon_list[@]}"
+do
+    fetch_pokemon_data "$pokemon" &
 done
 
-# Give them 2 seconds to run
-sleep 2
+# Show background jobs
+jobs
 
-# Kill the first background job as an example
-kill "${pids[0]}"
+# Wait for all background jobs to complete
+wait
 
-# Wait for the rest
-for pid in "${pids[@]}"; do
-    wait "$pid" 2>/dev/null
-done
-
-echo "Completed. (One process was killed intentionally)"
+echo "All Pokémon data fetched 🎉"
